@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Universal AI Chat - Gemini Clone</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        gemini: {
+                            bg: '#f8f9fa',
+                            sidebar: '#f0f4f9',
+                            card: '#ffffff',
+                            text: '#1f1f1f',
+                            subtext: '#5f6368',
+                            border: '#e0e0e0',
+                            primary: '#1a73e8',
+                            hover: '#e8eaed',
+                            darkBg: '#131314',
+                            darkSidebar: '#1e1f20',
+                            darkCard: '#1e1f20',
+                            darkText: '#e3e3e3',
+                            darkSubtext: '#c4c7c5',
+                            darkBorder: '#333537',
+                            darkHover: '#2d2e30'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- Marked.js for Markdown Rendering -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <style>
+        /* Custom scrollbar for clean UI */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 3px;
+        }
+        .dark ::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.2);
+        }
+        /* Markdown formatting styles */
+        .markdown-body pre {
+            background: #1e1e1e;
+            color: #dcdcdc;
+            padding: 1rem;
+            border-radius: 0.5rem;
+            overflow-x: auto;
+            margin-top: 0.5rem;
+            margin-bottom: 0.5rem;
+        }
+        .markdown-body code {
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+            font-size: 0.9em;
+        }
+        .markdown-body p {
+            margin-bottom: 0.75rem;
+        }
+        .markdown-body p:last-child {
+            margin-bottom: 0;
+        }
+        .markdown-body ul {
+            list-style-type: disc;
+            padding-left: 1.5rem;
+            margin-bottom: 0.75rem;
+        }
+        .markdown-body ol {
+            list-style-type: decimal;
+            padding-left: 1.5rem;
+            margin-bottom: 0.75rem;
+        }
+    </style>
+</head>
+<body class="bg-gemini-bg dark:bg-gemini-darkBg text-gemini-text dark:text-gemini-darkText min-h-screen flex flex-col transition-colors duration-200">
+
+    <!-- Loading Fallback (Hidden after JS initializes) -->
+    <div id="loading" class="fixed inset-0 bg-gemini-bg dark:bg-gemini-darkBg z-50 flex items-center justify-center text-lg font-medium">
+        <div class="flex items-center space-x-3">
+            <svg class="animate-spin h-6 w-6 text-gemini-primary" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            <span>Loading App...</span>
+        </div>
+    </div>
+
+    <!-- Main App Container -->
+    <div id="app" class="flex min-h-screen w-full relative overflow-x-hidden">
+
+        <!-- Mobile Sidebar Overlay -->
+        <div id="sidebar-overlay" class="fixed inset-0 bg-black/40 z-30 hidden md:hidden transition-opacity"></div>
+
+        <!-- Left Sidebar -->
+        <aside id="sidebar" class="fixed md:static inset-y-0 left-0 z-40 w-72 bg-gemini-sidebar dark:bg-gemini-darkSidebar border-r border-gemini-border dark:border-gemini-darkBorder flex flex-col transform -translate-x-full md:translate-x-0 transition-transform duration-200 ease-in-out shrink-0">
+            <!-- Sidebar Header -->
+            <div class="p-4 flex items-center justify-between border-b border-gemini-border/50 dark:border-gemini-darkBorder/50">
+                <button id="new-chat-btn" class="flex items-center gap-2 px-4 py-2.5 bg-gemini-hover dark:bg-gemini-darkHover hover:bg-gemini-border/60 dark:hover:bg-gemini-darkBorder rounded-full text-sm font-medium transition-colors w-full">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                    <span>New chat</span>
+                </button>
+                <button id="close-sidebar-btn" class="p-2 md:hidden hover:bg-gemini-hover dark:hover:bg-gemini-darkHover rounded-full">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
+            </div>
+
+            <!-- Chat History List -->
+            <div id="chat-list" class="flex-1 overflow-y-auto p-3 space-y-1">
+                <!-- Dynamic chat items injected here -->
+            </div>
+
+            <!-- Sidebar Footer / Settings -->
+            <div class="p-3 border-t border-gemini-border/50 dark:border-gemini-darkBorder/50 space-y-1">
+                <button id="system-prompt-btn" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm hover:bg-gemini-hover dark:hover:bg-gemini-darkHover transition-colors">
+                    <svg class="w-5 h-5 text-gemini-subtext dark:text-gemini-darkSubtext" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                    <span>System Prompt</span>
+                </button>
+                <button id="settings-btn" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm hover:bg-gemini-hover dark:hover:bg-gemini-darkHover transition-colors">
+                    <svg class="w-5 h-5 text-gemini-subtext dark:text-gemini-darkSubtext" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+                    <span>Settings</span>
+                </button>
+            </div>
+        </aside>
+
+        <!-- Main Chat Area -->
+        <main class="flex-1 flex flex-col min-w-0 bg-gemini-card dark:bg-gemini-darkCard relative">
+            <!-- Header -->
+            <header class="h-14 border-b border-gemini-border/50 dark:border-gemini-darkBorder/50 flex items-center justify-between px-4 sticky top-0 bg-gemini-card/80 dark:bg-gemini-darkCard/80 backdrop-blur-md z-20">
+                <div class="flex items-center gap-3">
+                    <button id="open-sidebar-btn" class="p-2 hover:bg-gemini-hover dark:hover:bg-gemini-darkHover rounded-full md:hidden">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
+                    </button>
+                    <div class="flex items-center gap-2">
+                        <h1 id="current-chat-title" class="font-semibold text-base truncate max-w-[200px] sm:max-w-xs">New Chat</h1>
+                        <span id="current-model-badge" class="text-xs px-2 py-0.5 bg-gemini-hover dark:bg-gemini-darkHover text-gemini-subtext dark:text-gemini-darkSubtext rounded-full hidden sm:inline-block">deepseek/deepseek-r1:free</span>
+                    </div>
+                </div>
+                <div class="flex items-center gap-2">
+                    <!-- Dark Mode Toggle -->
+                    <button id="theme-toggle" class="p-2 hover:bg-gemini-hover dark:hover:bg-gemini-darkHover rounded-full transition-colors" title="Toggle Dark Mode">
+                        <svg id="sun-icon" class="w-5 h-5 hidden dark:block" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"></path></svg>
+                        <svg id="moon-icon" class="w-5 h-5 block dark:hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path></svg>
+                    </button>
+                </div>
+            </header>
+
+            <!-- Chat Messages Container -->
+            <div id="chat-container" class="flex-1 overflow-y-auto px-4 py-6 space-y-6 pb-28">
+                <!-- Welcome Banner / Empty State -->
+                <div id="empty-state" class="max-w-xl mx-auto text-center space-y-4 my-auto pt-16">
+                    <div class="inline-flex p-3 bg-gemini-hover dark:bg-gemini-darkHover rounded-2xl">
+                        <svg class="w-8 h-8 text-gemini-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+                    </div>
+                    <h2 class="text-2xl sm:text-3xl font-semibold tracking-tight">Hello, friend</h2>
+                    <p class="text-gemini-subtext dark:text-gemini-darkSubtext text-sm sm:text-base">How can I help you today? Ask a question or pick a suggestion below.</p>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-4 text-left">
+                        <button class="suggestion-card p-3.5 border border-gemini-border dark:border-gemini-darkBorder rounded-xl hover:bg-gemini-hover dark:hover:bg-gemini-darkHover transition-colors text-sm">
+                            <span class="font-medium block">Explain quantum computing</span>
+                            <span class="text-gemini-subtext dark:text-gemini-darkSubtext text-xs">in simple terms</span>
+                        </button>
+                        <button class="suggestion-card p-3.5 border border-gemini-border dark:border-gemini-darkBorder rounded-xl hover:bg-gemini-hover dark:hover:bg-gemini-darkHover transition-colors text-sm">
+                            <span class="font-medium block">Write a Python script</span>
+                            <span class="text-gemini-subtext dark:text-gemini-darkSubtext text-xs">to parse CSV files</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Messages appended here -->
+                <div id="messages-list" class="max-w-3xl mx-auto space-y-6 w-full"></div>
+            </div>
+
+            <!-- Sticky Bottom Input Bar -->
+            <div class="absolute bottom-0 inset-x-0 bg-gradient-to-t from-gemini-card dark:from-gemini-darkCard via-gemini-card/90 dark:via-gemini-darkCard/90 to-transparent pt-6 pb-4 px-4 z-10">
+                <div class="max-w-3xl mx-auto">
+                    <form id="chat-form" class="bg-gemini-sidebar dark:bg-gemini-darkSidebar border border-gemini-border dark:border-gemini-darkBorder rounded-3xl p-2.5 shadow-sm focus-within:ring-2 focus-within:ring-gemini-primary/50 transition-all flex flex-col gap-2">
+                        <textarea id="user-input" rows="1" placeholder="Enter a prompt here..." class="w-full bg-transparent border-0 focus:ring-0 focus:outline-none resize-none px-3 py-1.5 text-sm sm:text-base max-h-36 placeholder:text-gemini-subtext dark:placeholder:text-gemini-darkSubtext"></textarea>
+                        
+                        <div class="flex items-center justify-between px-2 pt-1">
+                            <div class="flex items-center gap-2 text-xs text-gemini-subtext dark:text-gemini-darkSubtext">
+                                <span id="active-model-label">DeepSeek R1</span>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <button type="submit" id="send-btn" class="p-2 bg-gemini-primary text-white rounded-full hover:opacity-95 transition-opacity disabled:opacity-40 disabled:cursor-not-allowed" title="Send message">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h14M12 5l7 7-7 7"></path></svg>
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                    <div class="text-center mt-2">
+                        <p class="text-[11px] text-gemini-subtext dark:text-gemini-darkSubtext">AI can make mistakes. Verify important info.</p>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Settings Modal -->
+    <div id="settings-modal" class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-gemini-card dark:bg-gemini-darkCard border border-gemini-border dark:border-gemini-darkBorder rounded-2xl w-full max-w-md shadow-2xl overflow-hidden flex flex-col">
+            <div class="p-4 border-b border-gemini-border dark:border-gemini-darkBorder flex items-center justify-between">
+                <h3 class="font-semibold text-lg">Settings</h3>
+                <button id="close-settings-btn" class="p-1.5 hover:bg-gemini-hover dark:hover:bg-gemini-darkHover rounded-full">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
+            </div>
+            <div class="p-6 space-y-4">
+                <div>
+                    <label class="block text-sm font-medium mb-1.5">OpenRouter API Key</label>
+                    <input type="password" id="api-key-input" placeholder="sk-or-v1-..." class="w-full px-3.5 py-2.5 rounded-xl border border-gemini-border dark:border-gemini-darkBorder bg-transparent text-sm focus:outline-none focus:ring-2 focus:ring-gemini-primary">
+                    <p class="text-xs text-gemini-subtext dark:text-gemini-darkSubtext mt-1">Stored securely in your browser's localStorage.</p>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium mb-1.5">Model Name</label>
+                    <input type="text" id="model-input" value="deepseek/deepseek-r1:free" class="w-full px-3.5 py-2.5 rounded-xl border border-gemini-border dark:border-gemini-darkBorder bg-transparent text-sm focus:outline-none focus:ring-2 focus:ring-gemini-primary">
+                    <p class="text-xs text-gemini-subtext dark:text-gemini-darkSubtext mt-1">e.g., deepseek/deepseek-r1:free, google/gemini-2.0-flash-exp:free</p>
+                </div>
+            </div>
+            <div class="p-4 border-t border-gemini-border dark:border-gemini-darkBorder flex justify-end gap-2 bg-gemini-sidebar/50 dark:bg-gemini-darkSidebar/50">
+                <button id="save-settings-btn" class="px-4 py-2 bg-gemini-primary text-white rounded-xl text-sm font-medium hover:opacity-95 transition-opacity">Save Changes</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- System Prompt Modal -->
+    <div id="system-prompt-modal" class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-gemini-card dark:bg-gemini-darkCard border border-gemini-border dark:border-gemini-darkBorder rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden flex flex-col">
+            <div class="p-4 border-b border-gemini-border dark:border-gemini-darkBorder flex items-center justify-between">
+                <h3 class="font-semibold text-lg">System Prompt</h3>
+                <button id="close-system-prompt-btn" class="p-1.5 hover:bg-gemini-hover dark:hover:bg-gemini-darkHover rounded-full">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
+            </div>
+            <div class="p-6 space-y-4">
+                <div>
+                    <label class="block text-sm font-medium mb-1.5">Instructions for the AI</label>
+                    <textarea id="system-prompt-input" rows="5" placeholder="You are a helpful, concise AI assistant..." class="w-full px-3.5 py-2.5 rounded-xl border border-gemini-border dark:border-gemini-darkBorder bg-transparent text-sm focus:outline-none focus:ring-2 focus:ring-gemini-primary resize-none"></textarea>
+                    <p class="text-xs text-gemini-subtext dark:text-gemini-darkSubtext mt-1">Guides the AI's personality, tone, or formatting rules for the current chat.</p>
+                </div>
+            </div>
+            <div class="p-4 border-t border-gemini-border dark:border-gemini-darkBorder flex justify-end gap-2 bg-gemini-sidebar/50 dark:bg-gemini-darkSidebar/50">
+                <button id="save-system-prompt-btn" class="px-4 py-2 bg-gemini-primary text-white rounded-xl text-sm font-medium hover:opacity-95 transition-opacity">Apply Prompt</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Rename Chat Modal -->
+    <div id="rename-modal" class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-gemini-card dark:bg-gemini-darkCard border border-gemini-border dark:border-gemini-darkBorder rounded-2xl w-full max-w-sm shadow-2xl overflow-hidden flex flex-col">
+            <div class="p-4 border-b border-gemini-border dark:border-gemini-darkBorder flex items-center justify-between">
+                <h3 class="font-semibold text-base">Rename Chat</h3>
+                <button id="close-rename-btn" class="p-1.5 hover:bg-gemini-hover dark:hover:bg-gemini-darkHover rounded-full">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
+            </div>
+            <div class="p-6 space-y-4">
+                <input type="text" id="rename-input" class="w-full px-3.5 py-2.5 rounded-xl border border-gemini-border dark:border-gemini-darkBorder bg-transparent text-sm focus:outline-none focus:ring-2 focus:ring-gemini-primary">
+            </div>
+            <div class="p-4 border-t border-gemini-border dark:border-gemini-darkBorder flex justify-end gap-2 bg-gemini-sidebar/50 dark:bg-gemini-darkSidebar/50">
+                <button id="save-rename-btn" class="px-4 py-2 bg-gemini-primary text-wh
